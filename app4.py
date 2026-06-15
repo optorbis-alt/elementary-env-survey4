@@ -31,13 +31,21 @@ KNOWLEDGE_ANSWERS = {
     "Q6": ["1", "4"], "Q7": ["2", "4"], "Q8": ["2", "4"]
 }
 
+# 구글 시트 데이터 타입 변환 버그를 방지하는 안전한 채점 함수
 def score_knowledge(row):
     score = 0
-    for i in range(1, 6):
-        if int(row[f"지식_Q{i}"]) == KNOWLEDGE_ANSWERS[f"Q{i}"]: score += 1
-    for i in range(6, 9):
-        ans_list = str(row[f"지식_Q{i}"]).split(",")
-        if sorted(ans_list) == sorted(KNOWLEDGE_ANSWERS[f"Q{i}"]): score += 1
+    try:
+        for i in range(1, 6):
+            val = row[f"지식_Q{i}"]
+            if pd.isna(val) or val == "": continue
+            if int(float(val)) == KNOWLEDGE_ANSWERS[f"Q{i}"]: score += 1
+        for i in range(6, 9):
+            val = row[f"지식_Q{i}"]
+            if pd.isna(val) or val == "": continue
+            ans_list = [x.strip() for x in str(val).split(",") if x.strip()]
+            if sorted(ans_list) == sorted(KNOWLEDGE_ANSWERS[f"Q{i}"]): score += 1
+    except Exception:
+        return 0
     return (score / 8) * 100
 
 menu = st.sidebar.radio("원하는 메뉴를 선택하세요", ["📝 학생용 설문조사 입력", "📊 교사용 결과 분석 대시보드"])
@@ -52,7 +60,7 @@ if menu == "📝 학생용 설문조사 입력":
     with col3: s_num = st.number_input("번호", min_value=1, max_value=60, value=1, step=1)
     with col4: s_round = st.radio("제출 차수", ["1차 (4월)", "2차 (9월)"], horizontal=True)
 
-    student_id = f"{s_grade}학년 {s_class}반 {s_num}번"
+    student_id = f"{int(s_grade)}학년 {int(s_class)}반 {int(s_num)}번"
     st.markdown("---")
     answers = {}
     
@@ -60,7 +68,7 @@ if menu == "📝 학생용 설문조사 입력":
         st.markdown("#### [1] 환경지식 영역")
         answers["지식_Q1"] = st.radio("1. 환경에 관한 다음 설명 중, 가장 적절한 것은?", [1, 2, 3, 4], format_func=lambda x: ["① 동물과 식물은 흙, 공기, 물 등과 서로 관련이 없다.", "② 우리가 관계를 맺고 있는 주변의 모든 것은 환경이다.", "③ 환경에서 흙, 공기, 물 등은 서로 영향을 주고받지 않는다.", "④ 환경은 동물이나 식물과 같이 살아있는 생물 사이의 관계를 의미한다."][x-1])
         answers["지식_Q2"] = st.radio("2. 우리 생활과 자연환경의 관계에 대한 설명이다. 다음 중 가장 적절한 것은?", [1, 2, 3, 4], format_func=lambda x: ["① 우리의 생활 방식이 편리하게 바뀌어도, 자연환경은 그대로 유지된다.", "② 자연환경의 변화는 우리의 소비나 생활 방식에 영향을 미치지 않는다.", "③ 우리 지역에 도로나 건물이 새로 생기면 그 영향으로 자연환경도 바뀐다.", "④ 옛날에 사람들은 자연환경의 영향을 많이 받았으나, 오늘날 우리는 기술이 발전하여 영향을 받지 않고 살 수 있다."][x-1])
-        answers["지식_Q3"] = st.radio("3. 우리가 살아가는 환경에 관한 설명이다. 다음 중 가장 적절한 것은?", [1, 2, 3, 4], format_func=lambda x: ["① 우리는 생활의 불편함을 겪지 않고도 모든 환경문제를 해결할 수 있다.", "② 석탄·석유와 같은 자원은 우리가 살아가는데 필요한 만큼 끊임없이 얻을 수 있다.", "③ 환경은 우리가 살아가는 기초가 되기 때문에 우리는 환경과 조화롭게 살아야 한다.", "④ 과학기술이 발전하여 환경문제의 원인과 결과를 알면, 모든 환경문제를 해결할 수 있다."][x-1])
+        answers["지식_Q3"] = st.radio("3. 우리가 살아가는 환경에 관한 설명이다. 다음 중 가장 적절한 것은?", [1, 2, 3, 4], format_func=lambda x: ["① 우리는 생활의 불편함을 겪지 않고도 모든 환경문제를 해결할 수 있다.", "② 석탄·석유와 같은 자원은 우리가 살아가는데 필요한 만큼 끊임없이 얻을 수 있다.", "③ 환경은 우리가 살아가는 기초가 되기 때문에 우리는 환경과 조화롭게 살아야 한다.", "④ 과학기술이 발전하여 환경문제의 원인과 결과를 알면, 모든 환경문제를 해결할 수 axioms있다."][x-1])
         answers["지식_Q4"] = st.radio("4. 다음 환경문제와 그 문제를 해결하기 위한 노력을 연결한 것으로 가장 적절한 것은?", [1, 2, 3, 4], format_func=lambda x: ["① 열대 우림 파괴를 막기 위해 양치질할 때 컵을 사용한다.", "② 우리 학교 쓰레기를 줄이기 위해서 친구들과 환경캠페인을 한다.", "③ 맑은 물을 오염시키지 않기 위해 실내온도를 적정온도에 맞춘다.", "④ 바다 쓰레기를 줄이기 위해 사용하지 않는 전자제품의 플러그를 뽑는다."][x-1])
         answers["지식_Q5"] = st.radio("5. 다음 행동 중 자연환경에 긍정적인 영향을 주는 행동으로 가장 적절한 것은?", [1, 2, 3, 4], format_func=lambda x: ["① 쓰레기를 줄이기 위해 포장이 적게 된 물건을 구매한다.", "② 밝은 실내 환경을 위해 환한 낮에도 전등을 밝게 켜둔다.", "③ 화장실에서 손을 말리기 위해 손수건보다 화장지를 사용한다.", "④ 학교처럼 여러 사람이 사용하는 곳에서는 쾌적함을 위해 에너지를 마음껏 사용한다."][x-1])
         
@@ -72,7 +80,6 @@ if menu == "📝 학생용 설문조사 입력":
         q8_ans = st.multiselect("8. 쓰레기를 처리하는 방법 중 가장 적절한 2가지를 고르면?", ["1", "2", "3", "4"], format_func=lambda x: {"1": "① 전국의 쓰레기를 한곳에 모아 한꺼번에 처리한다.", "2": "② 다시 사용 가능한 유리병은 되돌려주고 돈을 받는다.", "3": "③ 집에서 태울 수 있는 쓰레기는 각자가 태워서 처리한다.", "4": "④ 페트병을 버릴 때는 병에 부착된 비닐과 페트병을 따로 분리하여 버린다."}[x])
         answers["지식_Q8"] = ",".join(sorted(q8_ans))
 
-        # [요청사항 반영] 환경정서 영역 문항 구체화
         st.markdown("#### [2] 환경정서 영역")
         likert_labels = {1: "매우 그렇지 않다", 2: "그렇지 않다", 3: "보통이다", 4: "그렇다", 5: "매우 그렇다"}
         disposition_questions = {
@@ -90,7 +97,6 @@ if menu == "📝 학생용 설문조사 입력":
         for i, q in disposition_questions.items():
             answers[f"정서_Q{i}"] = st.select_slider(f"{i}. {q}", options=[1, 2, 3, 4, 5], value=3, format_func=lambda x: likert_labels[x])
 
-        # [요청사항 반영] 환경실천 영역 문항 구체화
         st.markdown("#### [3] 환경실천 영역")
         practice_questions = {
             19: "나는 물을 사용하지 않을 경우, 샤워기나 수도꼭지를 잠글 것이다.",
@@ -164,29 +170,61 @@ else:
                 c2.metric("❤️ 정서 평균 공감도", f"{pd2:.2f}점", f"{pd2-pd1:+.2f}점")
                 c3.metric("🏃 실천 평균 의지력", f"{pp2:.2f}점", f"{pp2-pp1:+.2f}점")
 
+        # ---------------------------------------------------------------------
+        # [핵심 수정] 버그가 원천 차단된 학생별 개별 분석 공간
+        # ---------------------------------------------------------------------
         with tab2:
             st.subheader("🔍 학생별 개별 성장도 및 향상도 추적")
-            c_grade = st.selectbox("학년 선택", sorted(df["학년"].unique()))
-            c_class = st.selectbox("반 선택", sorted(df[df["학년"]==c_grade]["반"].unique()))
-            c_num = st.number_input("번호 입력", min_value=1, max_value=60, value=1)
             
-            target_id = f"{c_grade}학년 {c_class}반 {c_num}번"
-            student_data = df[df["학생 식별자"] == target_id].sort_values("차수")
-            rounds_submitted = student_data["차수"].tolist()
+            # 구글 시트에 실제로 기록되어 존재하는 학생들의 텍스트 목록만 추출합니다.
+            actual_students = sorted(df["학생 식별자"].dropna().unique())
             
-            if "1차 (4월)" in rounds_submitted and "2차 (9월)" not in rounds_submitted:
-                st.error("⚠️ 이 학생은 1차(4월) 데이터만 존재하며, 아직 2차(9월) 조사를 완료하지 않았습니다.")
-                st.dataframe(student_data[["차수", "지식_점수", "정서_평균", "실천_평균"]], use_container_width=True)
-            elif "1차 (4월)" in rounds_submitted and "2차 (9월)" in rounds_submitted:
-                s_pk1, s_pk2 = student_data[student_data["차수"]=="1차 (4월)"]["지식_점수"].values[0], student_data[student_data["차수"]=="2차 (9월)"]["지식_점수"].values[0]
-                s_pd1, s_pd2 = student_data[student_data["차수"]=="1차 (4월)"]["정서_평균"].values[0], student_data[student_data["차수"]=="2차 (9월)"]["정서_평균"].values[0]
-                s_pp1, s_pp2 = student_data[student_data["차수"]=="1차 (4월)"]["실천_평균"].values[0], student_data[student_data["차수"]=="2차 (9월)"]["실천_평균"].values[0]
-                
-                fig_ind = go.Figure()
-                fig_ind.add_trace(go.Bar(x=["지식", "정서", "실천"], y=[s_pk1, s_pd1, s_pp1], name="1차 (4월)", marker_color="#FFC6FF"))
-                fig_ind.add_trace(go.Bar(x=["지식", "정서", "실천"], y=[s_pk2, s_pd2, s_pp2], name="2차 (9월)", marker_color="#BDB2FF"))
-                st.plotly_chart(fig_ind, use_container_width=True)
-                
-                st.info(f"📍 **[향상도]** 지식: {s_pk2-s_pk1:+.1f}점 | 정서: {s_pd2-s_pd1:+.2f}점 | 실천: {s_pp2-s_pp1:+.2f}점")
+            if not actual_students:
+                st.info("현재 분석할 수 있는 학생 데이터가 데이터베이스에 존재하지 않습니다.")
             else:
-                st.info("실제 입력된 데이터가 없습니다. 학생 정보를 다시 조회해 주세요.")
+                # [개선사항] 학년, 반, 번호를 일일이 입력하는 대신 실제 존재하는 학생을 리스트에서 바로 선택합니다.
+                selected_student = st.selectbox("분석할 학생을 고르세요", actual_students)
+                
+                # 선택한 학생의 데이터만 필터링
+                student_data = df[df["학생 식별자"] == selected_student].sort_values("차수")
+                rounds_submitted = student_data["차수"].tolist()
+                
+                st.markdown(f"### 📍 데이터 분석 대상: `{selected_student}`")
+                
+                # 1차(4월)만 제출하고 2차(9월)는 안 낸 경우
+                if "1차 (4월)" in rounds_submitted and "2차 (9월)" not in rounds_submitted:
+                    st.error("⚠️ 이 학생은 1차(4월) 데이터만 존재하며, 아직 2차(9월) 조사를 완료하지 않았습니다.")
+                    st.warning("👉 2차(9월) 조사가 최종 입력되기 전까지는 향상도 비교 그래프 및 코멘트 출력이 제한됩니다.")
+                    st.write("📋 현재 입력 완료된 1차(4월) 기본 점수:")
+                    st.dataframe(student_data[["차수", "지식_점수", "정서_평균", "실천_평균"]], use_container_width=True)
+                
+                # 1차와 2차를 모두 완벽히 제출한 경우 (정상 비교 출력)
+                elif "1차 (4월)" in rounds_submitted and "2차 (9월)" in rounds_submitted:
+                    s_pk1 = student_data[student_data["차수"]=="1차 (4월)"]["지식_점수"].values[0]
+                    s_pk2 = student_data[student_data["차수"]=="2차 (9월)"]["지식_점수"].values[0]
+                    s_pd1 = student_data[student_data["차수"]=="1차 (4월)"]["정서_평균"].values[0]
+                    s_pd2 = student_data[student_data["차수"]=="2차 (9월)"]["정서_평균"].values[0]
+                    s_pp1 = student_data[student_data["차수"]=="1차 (4월)"]["실천_평균"].values[0]
+                    s_pp2 = student_data[student_data["차수"]=="2차 (9월)"]["실천_평균"].values[0]
+                    
+                    # 학생 전용 비교 그래프 렌더링
+                    fig_ind = go.Figure()
+                    fig_ind.add_trace(go.Bar(x=["지식 점수 (100점)", "정서 평균 (5점)", "실천 평균 (5점)"], y=[s_pk1, s_pd1, s_pp1], name="1차 (4월)", marker_color="#FFC6FF"))
+                    fig_ind.add_trace(go.Bar(x=["지식 점수 (100점)", "정서 평균 (5점)", "실천 평균 (5점)"], y=[s_pk2, s_pd2, s_pp2], name="2차 (9월)", marker_color="#BDB2FF"))
+                    st.plotly_chart(fig_ind, use_container_width=True)
+                    
+                    st.markdown("#### 📝 이 학생만을 위한 항목별 성장 피드백")
+                    k_diff = s_pk2 - s_pk1
+                    d_diff = s_pd2 - s_pd1
+                    p_diff = s_pp2 - s_pp1
+                    
+                    k_txt = f"**{k_diff:+.1f}점** 변동함." if k_diff != 0 else "점수 변동 없음."
+                    d_txt = f"**{d_diff:+.2f}점** 변동함." if d_diff != 0 else "점수 변동 없음."
+                    p_txt = f"**{p_diff:+.2f}점** 변동함." if p_diff != 0 else "점수 변동 없음."
+
+                    st.info(f"📍 **[환경지식 영역]** 사전 대비 {k_txt}\n\n📍 **[환경정서 영역]** 사전 대비 {d_txt}\n\n📍 **[환경실천 영역]** 사전 대비 {p_txt}")
+                
+                # 2차(9월)만 먼저 제출하고 1차가 없는 특이 케이스 예외 처리
+                elif "2차 (9월)" in rounds_submitted and "1차 (4월)" not in rounds_submitted:
+                    st.warning("⚠️ 이 학생은 2차(9월) 데이터만 존재하고, 1차(4월) 데이터가 누락되어 비교할 수 없습니다.")
+                    st.dataframe(student_data[["차수", "지식_점수", "정서_평균", "실천_평균"]], use_container_width=True)
