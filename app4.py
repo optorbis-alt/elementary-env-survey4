@@ -89,6 +89,7 @@ if menu == "📝 학생용 설문조사 입력":
         st.markdown("#### [1] 환경지식 영역")
         answers["지식_Q1"] = st.radio("1. 환경에 관한 다음 설명 중, 가장 적절한 것은?", [1, 2, 3, 4], format_func=lambda x: ["① 동물과 식물은 흙, 공기, 물 등과 서로 관련이 없다.", "② 우리가 관계를 맺고 있는 주변의 모든 것은 환경이다.", "③ 환경에서 흙, 공기, 물 등은 서로 영향을 주고받지 않는다.", "④ 환경은 동물이나 식물과 같이 살아있는 생물 사이의 관계를 의미한다."][x-1])
         answers["지식_Q2"] = st.radio("2. 우리 생활과 자연환경의 관계에 대한 설명이다. 다음 중 가장 적절한 것은?", [1, 2, 3, 4], format_func=lambda x: ["① 우리의 생활 방식이 편리하게 바뀌어도, 자연환경은 그대로 유지된다.", "② 자연환경의 변화는 우리의 소비나 생활 방식에 영향을 미치지 않는다.", "③ 우리 지역에 도로나 건물이 새로 생기면 그 영향으로 자연환경도 바뀐다.", "④ 옛날에 사람들은 자연환경의 영향을 많이 받았으나, 오늘날 우리는 기술이 발전하여 영향을 받지 않고 살 수 있다."][x-1])
+        # [오타 수정] axioms 지우고 '해결할 수 있다'로 교정
         answers["지식_Q3"] = st.radio("3. 우리가 살아가는 환경에 관한 설명이다. 다음 중 가장 적절한 것은?", [1, 2, 3, 4], format_func=lambda x: ["① 우리는 생활의 불편함을 겪지 않고도 모든 환경문제를 해결할 수 있다.", "② 석탄·석유와 같은 자원은 우리가 살아가는데 필요한 만큼 끊임없이 얻을 수 있다.", "③ 환경은 우리가 살아가는 기초가 되기 때문에 우리는 환경과 조화롭게 살아야 한다.", "④ 과학기술이 발전하여 환경문제의 원인과 결과를 알면, 모든 환경문제를 해결할 수 있다."][x-1])
         answers["지식_Q4"] = st.radio("4. 다음 환경문제와 그 문제를 해결하기 위한 노력을 연결한 것으로 가장 적절한 것은?", [1, 2, 3, 4], format_func=lambda x: ["① 열대 우림 파괴를 막기 위해 양치질할 때 컵을 사용한다.", "② 우리 학교 쓰레기를 줄이기 위해서 친구들과 환경캠페인을 한다.", "③ 맑은 물을 오염시키지 않기 위해 실내온도를 적정온도에 맞춘다.", "④ 바다 쓰레기를 줄이기 위해 사용하지 않는 전자제품의 플러그를 뽑는다."][x-1])
         answers["지식_Q5"] = st.radio("5. 다음 행동 중 자연환경에 긍정적인 영향을 주는 행동으로 가장 적절한 것은?", [1, 2, 3, 4], format_func=lambda x: ["① 쓰레기를 줄이기 위해 포장이 적게 된 물건을 구매한다.", "② 밝은 실내 환경을 위해 환한 낮에도 전등을 밝게 켜둔다.", "③ 화장실에서 손을 말리기 위해 손수건보다 화장지를 사용한다.", "④ 학교처럼 여러 사람이 사용하는 곳에서는 쾌적함을 위해 에너지를 마음껏 사용한다."][x-1])
@@ -179,34 +180,57 @@ else:
 
         with tab1:
             st.subheader("📊 학교 전체 환경소양 실시간 결과")
-            paired_students = df.groupby("학생 식별자").filter(lambda x: len(x["차수"].unique()) == 2)
-            actual_paired_count = len(paired_students) // 2
+            
+            # 1차(사전)와 2차(사후) 모두 완료한 매칭 학생단 식별
+            paired_selector = df.groupby("학생 식별자").filter(lambda x: len(x["차수"].unique()) == 2)
+            actual_paired_count = len(paired_selector) // 2
             
             st.markdown(f"* **총 참여 학생 수:** {df['학생 식별자'].nunique()}명 | **총 제출 데이터 수:** {len(df)}건")
-            st.markdown(f"* **1차 및 2차를 모두 완료한 매칭 학생 수:** {actual_paired_count}명")
+            st.markdown(f"* **1차 및 2차를 모두 완료한 매칭 분석 대상자:** {actual_paired_count}명")
             
-            summary = df.groupby("차수")[["지식_점수", "정서_평균", "실천_평균"]].mean().reset_index()
+            # [통계 교정] 학술 연구용 동일집단 비교 토글 스위치 제공
+            analysis_type = st.radio("📈 통계 분석 모델 선택", ["모든 제출 데이터 포함 (단순 누적 평균)", "1차·2차 조사 모두 마친 동일 학생만 포함 (학술 비교용)"], horizontal=True)
             
-            fig_all = go.Figure()
-            colors = {"1차 (4월)": "#A2D2FF", "2차 (9월)": "#2A9D8F"}
-            for r_name in summary["차수"].unique():
-                r_df = summary[summary["차수"] == r_name]
-                fig_all.add_trace(go.Bar(
-                    x=["환경지식", "환경정서(x20)", "환경실천(x20)"],
-                    y=[r_df["지식_점수"].values[0], r_df["정서_평균"].values[0]*20, r_df["실천_평균"].values[0]*20],
-                    name=r_name, marker_color=colors.get(r_name, "#FFAAA6")
-                ))
-            st.plotly_chart(fig_all, use_container_width=True)
+            plot_df = paired_selector if "동일 학생만 포함" in analysis_type else df
             
-            if "1차 (4월)" in summary["차수"].values and "2차 (9월)" in summary["차수"].values:
-                pk1, pk2 = summary[summary["차수"] == "1차 (4월)"]["지식_점수"].values[0], summary[summary["차수"] == "2차 (9월)"]["지식_점수"].values[0]
-                pd1, pd2 = summary[summary["차수"] == "1차 (4월)"]["정서_평균"].values[0], summary[summary["차수"] == "2차 (9월)"]["정서_평균"].values[0]
-                pp1, pp2 = summary[summary["차수"] == "1차 (4월)"]["실천_평균"].values[0], summary[summary["차수"] == "2차 (9월)"]["실천_평균"].values[0]
+            if plot_df.empty:
+                st.info("선택하신 통계 모델에 해당하는 매칭 데이터가 아직 부족합니다.")
+            else:
+                summary = plot_df.groupby("차수")[["지식_점수", "정서_평균", "실천_평균"]].mean().reset_index()
+                
+                fig_all = go.Figure()
+                colors = {"1차 (4월)": "#A2D2FF", "2차 (9월)": "#2A9D8F"}
+                for r_name in summary["차수"].unique():
+                    r_df = summary[summary["차수"] == r_name]
+                    fig_all.add_trace(go.Bar(
+                        x=["환경지식", "환경정서(x20)", "환경실천(x20)"],
+                        y=[r_df["지식_점수"].values[0], r_df["정서_평균"].values[0]*20, r_df["실천_평균"].values[0]*20],
+                        name=r_name, marker_color=colors.get(r_name, "#FFAAA6")
+                    ))
+                st.plotly_chart(fig_all, use_container_width=True)
+                
+                # [로직 교정] 데이터 수집 현황(4월 단독 vs 9월 매칭)에 따라 유연하게 카드를 출력하는 로직
+                pk_4 = summary[summary["차수"] == "1차 (4월)"]["지식_점수"].values[0] if "1차 (4월)" in summary["차수"].values else None
+                pk_9 = summary[summary["차수"] == "2차 (9월)"]["지식_점수"].values[0] if "2차 (9월)" in summary["차수"].values else None
+                
+                pd_4 = summary[summary["차수"] == "1차 (4월)"]["정서_평균"].values[0] if "1차 (4월)" in summary["차수"].values else None
+                pd_9 = summary[summary["차수"] == "2차 (9월)"]["정서_평균"].values[0] if "2차 (9월)" in summary["차수"].values else None
+                
+                pp_4 = summary[summary["차수"] == "1차 (4월)"]["실천_평균"].values[0] if "1차 (4월)" in summary["차수"].values else None
+                pp_9 = summary[summary["차수"] == "2차 (9월)"]["실천_평균"].values[0] if "2차 (9월)" in summary["차수"].values else None
                 
                 c1, c2, c3 = st.columns(3)
-                c1.metric("💡 지식 평균 성취도", f"{pk2:.1f}점", f"{pk2-pk1:+.1f}점")
-                c2.metric("❤️ 정서 평균 공감도", f"{pd2:.2f}점", f"{pd2-pd1:+.2f}점")
-                c3.metric("🏃 실천 평균 의지력", f"{pp2:.2f}점", f"{pp2-pp1:+.2f}점")
+                
+                # 2차(9월) 결과 위주 출력 (1차 대비 성장률 자동 연산)
+                if pk_9 is not None:
+                    c1.metric("💡 지식 평균 성취도 (9월 기준)", f"{pk_9:.1f}점", f"{pk_9-pk_4:+.1f}점" if pk_4 is not None else None)
+                    c2.metric("❤️ 정서 평균 공감도 (9월 기준)", f"{pd_9:.2f}점", f"{pd_9-pd_4:+.2f}점" if pd_4 is not None else None)
+                    c3.metric("🏃 실천 평균 의지력 (9월 기준)", f"{pp_9:.2f}점", f"{pp_9-pp_4:+.2f}점" if pp_4 is not None else None)
+                # 학기 초 1차(4월) 데이터만 단독 존재할 때의 예외 안전망
+                elif pk_4 is not None:
+                    c1.metric("💡 지식 평균 성취도 (4월 기준)", f"{pk_4:.1f}점")
+                    c2.metric("❤️ 정서 평균 공감도 (4월 기준)", f"{pd_4:.2f}점")
+                    c3.metric("🏃 실천 평균 의지력 (4월 기준)", f"{pp_4:.2f}점")
 
         with tab2:
             st.subheader("🔍 학생별 개별 성장도 및 향상도 추적")
